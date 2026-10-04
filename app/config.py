@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     auto_approve_max_amount: float = 10000.0
     new_vendor_review_amount: float = 2000.0
 
+    # Hardening / public demo
+    api_key: SecretStr = SecretStr("")      # when set, every API call must send header X-API-Key
+    max_request_bytes: int = 1_000_000      # larger request bodies get 413
+    demo_mode: bool = False                 # public demo: seed sample data, rate-limit writes, reset on a schedule
+    demo_writes_per_minute: int = 60
+    demo_reset_minutes: int = 60
     # Mailbox integration (see .env.example). Credentials come from the environment or a git-ignored .env file.
     imap_host: str = ""
     imap_port: int = 993

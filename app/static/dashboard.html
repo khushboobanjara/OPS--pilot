@@ -15,7 +15,6 @@
   body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
   header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:16px 24px; }
   h1 { font-size:20px; margin:0; } h1 small { color:var(--muted); font-weight:400; font-size:13px; margin-left:8px; }
-  main { padding:0 24px 40px; max-width:1100px; margin:0 auto; }
   button { font:inherit; cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--text); padding:6px 12px; border-radius:6px; }
   button:hover { border-color:var(--accent); } button:disabled { opacity:.5; cursor:default; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -48,25 +47,56 @@
   dialog { width:min(760px,94vw); border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); padding:16px; }
   .step { border-left:2px solid var(--line); padding:0 0 10px 12px; margin-left:4px; }
   .empty { text-align:center; padding:40px; color:var(--muted); }
+
+  /* ---- app shell */
+  .app { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .side { background:#14213d; color:#dbe4ff; padding:18px 12px; display:flex; flex-direction:column; gap:6px; position:sticky; top:0; height:100vh; }
+  .brand { font-size:19px; font-weight:700; color:#fff; padding:0 8px; } .brand b { color:#7d98ff; }
+  .brand small { display:block; font-size:11px; font-weight:400; color:#9fb0dd; margin:2px 0 14px; }
+  .nav { display:flex; align-items:center; justify-content:space-between; width:100%; text-align:left; background:none; border:none; color:#dbe4ff; padding:9px 10px; border-radius:8px; }
+  .nav:hover { background:#22325a; } .nav.active { background:var(--accent); color:#fff; font-weight:600; }
+  .badge { background:#e5484d; color:#fff; border-radius:99px; font-size:11px; padding:0 7px; } .badge:empty { display:none; }
+  .sidefoot { margin-top:auto; display:flex; flex-direction:column; gap:8px; padding:0 4px; } .sidefoot a { color:#9fb0dd; font-size:12px; }
+  .sidefoot button { background:#22325a; border-color:#2f4278; color:#fff; }
+  .content { min-width:0; } .topbar { display:flex; gap:10px; padding:14px 24px; align-items:center; }
+  .topbar input { flex:1; max-width:520px; padding:8px 12px; border-radius:8px; }
+  #view { padding:0 24px 40px; max-width:1200px; }
+  h2.hello { margin:6px 0 2px; font-size:24px; } h2.hello b { color:var(--accent); }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin:16px 0; }
+  .kpi { border-radius:12px; padding:14px 16px; border:1px solid var(--line); background:var(--card); }
+  .kpi span { font-size:12px; color:var(--muted); } .kpi b { display:block; font-size:28px; line-height:1.2; } .kpi small { color:var(--muted); }
+  .kpi.g { border-left:4px solid var(--green); } .kpi.a { border-left:4px solid var(--amber); } .kpi.r { border-left:4px solid var(--red); } .kpi.p { border-left:4px solid #8b5cf6; } .kpi.b { border-left:4px solid var(--accent); }
+  .charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:12px; margin-bottom:16px; }
+  .chart { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; } .chart h3 { margin:0 0 10px; font-size:14px; }
+  .legend { display:grid; gap:4px; font-size:12px; } .legend i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+  .barlist { display:grid; gap:10px; font-size:12px; }
+  .legend div { display:flex; justify-content:space-between; gap:12px; } .donutwrap { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .chart svg { max-width:100%; height:auto; } .axis { fill:var(--muted); font-size:9px; }
+  textarea { width:100%; font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); min-height:150px; }
+  .pill.purple { background:#ece6fd; color:#6d3fd1; }
+  @media (max-width:760px) { .app { grid-template-columns:1fr; } .side { position:static; height:auto; flex-direction:row; flex-wrap:wrap; align-items:center; } .sidefoot { margin:0; flex-direction:row; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>OpsPilot AI <small>Accounts payable automation</small></h1>
-  <div>
-    <button id="demo">Load demo data</button>
-    <button id="refresh">Refresh</button>
-    <a href="/docs" style="margin-left:8px">API docs</a>
+<div class="app">
+  <aside class="side">
+    <div class="brand">OpsPilot <b>AI</b><small>Intelligent Business Workflow Automation</small></div>
+    <button class="nav active" data-tab="home">Home</button>
+    <button class="nav" data-tab="process">Process Email</button>
+    <button class="nav" data-tab="all">Invoices</button>
+    <button class="nav" data-tab="queue">Review Queue <span class="badge" id="qcount"></span></button>
+    <button class="nav" data-tab="vendors">Vendors</button>
+    <button class="nav" data-tab="reports">Reports</button>
+    <button class="nav" data-tab="audit">Audit Logs</button>
+    <button class="nav" data-tab="settings">Settings</button>
+    <div class="sidefoot"><button id="demo">Load demo data</button><a href="/docs">API docs</a></div>
+  </aside>
+  <div class="content">
+    <div id="banner" hidden style="background:#3b2f0b;color:#f5d98b;padding:8px 16px;font-size:13px;text-align:center"></div>
+    <div class="topbar"><input id="search" placeholder="Search invoices by number, vendor or email..."><button id="refresh">Refresh</button></div>
+    <main id="view"></main>
   </div>
-</header>
-<main>
-  <div class="cards" id="metrics"></div>
-  <div class="tabs">
-    <button class="tab active" data-tab="queue">Review queue <span id="qcount"></span></button>
-    <button class="tab" data-tab="all">All invoices</button>
-  </div>
-  <div id="view"></div>
-</main>
+</div>
 <dialog id="audit"><div id="auditBody"></div><div style="text-align:right"><button id="closeAudit">Close</button></div></dialog>
 
 <script>
@@ -76,11 +106,16 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 
 const FIELDS = [["vendor_name", "Vendor"], ["invoice_number", "Invoice no."], ["invoice_date", "Invoice date"],
                 ["due_date", "Due date"], ["currency", "Currency"], ["total_amount", "Total amount"], ["po_number", "PO number"]];
-const SIGNALS = { duplicate: "Duplicate", anomaly: "Amount anomaly", validation_issues: "Validation", extraction_uncertainty: "Extraction doubt" };
-let tab = "queue", filter = "";
+const SIGNALS = { duplicate: "Duplicate", anomaly: "Amount anomaly", burst: "Burst of invoices", validation_issues: "Validation", extraction_uncertainty: "Extraction doubt" };
+let tab = "home", filter = "";
 
-async function api(path, opts = {}) {
-  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+async function api(path, opts = {}, retried = false) {
+  const key = sessionStorage.getItem("opspilot_key");
+  const r = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", ...(key ? { "X-API-Key": key } : {}) } });
+  if (r.status === 401 && !retried) {                       // server needs an API key: ask once, remember for this tab
+    const k = prompt("This server requires an API key:");
+    if (k) { sessionStorage.setItem("opspilot_key", k.trim()); return api(path, opts, true); }
+  }
   const data = await r.json().catch(() => null);
   if (!r.ok) {
     const d = data && data.detail;
@@ -97,20 +132,94 @@ const riskClass = r => r == null ? "gray" : r <= 0.30 ? "green" : r < 0.85 ? "am
 const riskPill = r => `<span class="pill ${riskClass(r)}">risk ${r == null ? "?" : r.toFixed(2)}</span>`;
 const statusPill = s => `<span class="pill ${s === "approved" ? "green" : s === "rejected" ? "red" : "amber"}">${esc(s.replace("_", " "))}</span>`;
 
-// ---------- metrics
-async function loadMetrics() {
-  const m = await api("/metrics");
-  const rate = m.automation_rate == null ? "-" : (m.automation_rate * 100).toFixed(1) + "%";
-  const ms = m.avg_pipeline_ms_per_email == null ? "-" : m.avg_pipeline_ms_per_email.toFixed(0) + " ms";
-  const sv = m.estimated_savings;
-  $("#metrics").innerHTML = [
-    ["Invoices", m.invoices, `${m.emails_received} emails received`],
-    ["Automation rate", rate, "approved with no human"],
-    ["Awaiting review", m.pending_review, "in the queue"],
-    ["Avg processing", ms, "per email, all stages"],
-    ["Est. time saved", sv.hours + " h", `~${sv.cost} cost - ${sv.assumptions}`],
-  ].map(([k, v, s]) => `<div class="metric" title="${esc(s)}"><span>${esc(k)}</span><b>${esc(v)}</b><span>${esc(s.length > 38 ? s.slice(0, 36) + "..." : s)}</span></div>`).join("");
-  $("#qcount").textContent = m.pending_review ? `(${m.pending_review})` : "";
+// ---------- charts (plain SVG, no libraries, so the page works offline)
+const COLORS = { auto: "#22a06b", rev: "#4c7be8", pend: "#f0a23b", rej: "#e5484d", dup: "#8b5cf6" };
+function donut(slices, total) {
+  let off = 25;
+  const arcs = slices.filter(x => x.value > 0).map(x => { const p = x.value / total * 100;
+    const e = `<circle r="15.9155" cx="21" cy="21" fill="none" stroke="${x.color}" stroke-width="5" stroke-dasharray="${p} ${100 - p}" stroke-dashoffset="${off}"/>`; off -= p; return e; }).join("");
+  return `<svg viewBox="0 0 42 42" width="160" height="160">${total ? arcs : '<circle r="15.9155" cx="21" cy="21" fill="none" stroke="var(--line)" stroke-width="5"/>'}
+    <text x="21" y="22" text-anchor="middle" font-size="7" font-weight="700" fill="currentColor">${total}</text>
+    <text x="21" y="27.5" text-anchor="middle" font-size="2.7" fill="var(--muted)">Total invoices</text></svg>`;
+}
+function lineChart(t) {
+  if (t.length < 2) return `<div class="empty">Not enough dates yet to draw a trend.</div>`;
+  const W = 320, H = 150, L = 26, B = 18, max = Math.max(...t.map(x => x.invoices), 1);
+  const X = i => L + i * (W - L - 6) / (t.length - 1), Y = v => H - B - v / max * (H - B - 8);
+  const pts = k => t.map((x, i) => `${X(i).toFixed(1)},${Y(x[k]).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}"><line x1="${L}" y1="${Y(0)}" x2="${W}" y2="${Y(0)}" stroke="var(--line)"/>
+    <text class="axis" x="0" y="${Y(max) + 3}">${max}</text><text class="axis" x="0" y="${Y(0) + 3}">0</text>
+    <polyline fill="none" stroke="${COLORS.rev}" stroke-width="2" points="${pts("invoices")}"/>
+    <polyline fill="none" stroke="${COLORS.auto}" stroke-width="2" points="${pts("auto_approved")}"/>
+    <text class="axis" x="${L}" y="${H - 4}">${esc(t[0].date.slice(5))}</text><text class="axis" x="${W - 6}" y="${H - 4}" text-anchor="end">${esc(t[t.length - 1].date.slice(5))}</text></svg>
+    <div class="legend"><div><span><i style="background:${COLORS.rev}"></i>Invoices per day</span></div><div><span><i style="background:${COLORS.auto}"></i>Auto processed</span></div></div>`;
+}
+function barChart(obj) {
+  const e = Object.entries(obj).sort((a, b) => b[1] - a[1]), max = Math.max(...e.map(x => x[1]), 1);
+  return e.length ? `<div class="barlist">${e.map(([k, v]) => `<div style="display:grid;grid-template-columns:110px 1fr 28px;gap:8px;align-items:center">
+    <span>${esc(k.replace("_", " "))}</span><div class="bar"><i style="width:${v / max * 100}%"></i></div><b>${v}</b></div>`).join("")}</div>` : `<div class="empty">No emails yet.</div>`;
+}
+
+// ---------- stats + home page
+let stats = null;
+const riskLevel = r => r == null ? ["-", "gray"] : r <= 0.30 ? ["Low", "green"] : r < 0.60 ? ["Medium", "amber"] : ["High", "red"];
+function statusLabel(i) {
+  if (i.duplicate_of) return ["Duplicate", "purple"];
+  if (i.status === "approved") return [i.decision === "auto_approved" ? "Auto processed" : "Approved", "green"];
+  if (i.status === "rejected") return ["Rejected", "red"];
+  return ["Pending review", "amber"];
+}
+async function loadStats() {
+  stats = await api("/stats");
+  $("#qcount").textContent = stats.pending_review || "";
+}
+function recentTable(list) {
+  return list.length ? `<table><thead><tr><th>#</th><th>Vendor</th><th>Invoice</th><th>Amount</th><th>Status</th><th>Risk</th></tr></thead><tbody>` +
+    list.map(i => { const [sl, sc] = statusLabel(i), [rl, rc] = riskLevel(i.risk_score);
+      return `<tr data-id="${i.id}"><td>${i.id}</td><td>${esc(i.vendor_name || "-")}</td><td>${esc(i.invoice_number || "-")}</td><td>${esc(money(i.total_amount, i.currency))}</td>
+        <td><span class="pill ${sc}">${sl}</span></td><td><span class="pill ${rc}">${rl}</span></td></tr>`; }).join("") + `</tbody></table>`
+    : `<div class="empty">No invoices yet. Use "Load demo data" or Process Email.</div>`;
+}
+function renderHome() {
+  const st = stats, n = st.invoices, d = st.donut, pct = v => n ? Math.round(v / n * 100) + "%" : "-";
+  const slices = [["Auto processed", d.auto_processed, COLORS.auto], ["Approved by reviewer", d.approved_by_reviewer, COLORS.rev],
+    ["Pending review", d.pending_review, COLORS.pend], ["Rejected", d.rejected, COLORS.rej], ["Duplicates", d.duplicates, COLORS.dup]];
+  const sv = st.estimated_savings;
+  $("#view").innerHTML = `
+    <div class="row"><div><h2 class="hello">Welcome to OpsPilot <b>AI</b></h2><div class="muted">Automate business workflows. Reduce manual effort. Focus on what matters.</div></div>
+      <button class="primary" data-tab="process">Process New Email</button></div>
+    <div class="kpis">
+      <div class="kpi b"><span>Total invoices</span><b>${n}</b><small>${st.emails_received} emails received</small></div>
+      <div class="kpi g"><span>Auto processed</span><b>${st.by_decision.auto_approved || 0}</b><small>${pct(st.by_decision.auto_approved || 0)} of invoices</small></div>
+      <div class="kpi a"><span>Pending review</span><b>${st.pending_review}</b><small>${pct(st.pending_review)} of invoices</small></div>
+      <div class="kpi r"><span>High risk</span><b>${st.high_risk}</b><small>risk at or above ${st.high_risk_threshold}</small></div>
+      <div class="kpi p"><span>Duplicates</span><b>${st.duplicates}</b><small>${pct(st.duplicates)} of invoices</small></div></div>
+    <div class="charts">
+      <div class="chart"><h3>Invoice processing status</h3><div class="donutwrap">${donut(slices.map(([l, v, c]) => ({ label: l, value: v, color: c })), n)}
+        <div class="legend">${slices.map(([l, v, c]) => `<div><span><i style="background:${c}"></i>${l}</span><b>${v}</b></div>`).join("")}</div></div></div>
+      <div class="chart"><h3>Invoices over time</h3>${lineChart(st.timeline)}</div>
+      <div class="chart"><h3>What arrives in the inbox</h3>${barChart(st.categories)}</div></div>
+    <div class="row" style="margin-bottom:8px"><h3 style="margin:0">Recent invoices</h3><button data-tab="all">View all</button></div>
+    ${recentTable(st.recent)}
+    <p class="muted" style="font-size:12px">Estimated time saved: ${sv.hours} h (about ${sv.cost} in cost). ${esc(sv.assumptions)}. This is an estimate, not a measurement. Average pipeline time ${st.avg_pipeline_ms_per_email ?? "-"} ms per email.</p>`;
+}
+
+// ---------- process a pasted email
+function renderProcess() {
+  $("#view").innerHTML = `<h2 class="hello">Process an email</h2><div class="muted" style="margin-bottom:12px">Paste an invoice email. It goes through the same pipeline as mail arriving from the inbox.</div>
+    <div class="item"><div class="fields"><div><label>From</label><input id="pFrom" value="billing@acme.example"></div><div><label>Subject</label><input id="pSubj" value="Invoice INV-20001"></div></div>
+    <label>Body</label><textarea id="pBody">Hello,\n\nPlease find invoice INV-20001 attached.\nVendor: Acme Supplies Ltd\nInvoice Date: ${new Date().toISOString().slice(0, 10)}\nDue Date: ${new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10)}\nTotal Amount: USD 1250.00\n\nRegards,\nAcme Supplies Ltd</textarea>
+    <div class="actions" style="margin-top:10px"><button class="primary" id="pGo">Process</button></div><div id="pOut"></div></div>`;
+  $("#pGo").onclick = async () => {
+    const out = $("#pOut"); out.innerHTML = "";
+    try {
+      const r = await api("/emails", { method: "POST", body: JSON.stringify({ message_id: "manual-" + Date.now(), sender: $("#pFrom").value, subject: $("#pSubj").value, body: $("#pBody").value }) });
+      const inv = r.invoice;
+      out.innerHTML = `<div class="item" style="margin-top:12px"><b>Decision: ${esc((r.decision || "").replace("_", " "))}</b>${inv ? ` ${riskPill(inv.risk_score)} <span class="muted">${esc(inv.vendor_name || "")} ${esc(inv.invoice_number || "")} ${esc(money(inv.total_amount, inv.currency))}</span>` : ""}
+        <ul class="reasons">${((inv && inv.decision_reasons) || r.flags || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>${inv ? `<button data-action="audit-id" data-id="${inv.id}">Audit trail</button>` : ""}</div>`;
+      await loadStats();
+    } catch (e) { out.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+  };
 }
 
 // ---------- review queue
@@ -169,7 +278,9 @@ async function submitReview(card, action) {
 
 // ---------- all invoices
 async function renderAll() {
-  const list = await api("/invoices" + (filter ? `?status=${filter}` : ""));
+  const q = $("#search").value.trim().toLowerCase();
+  let list = await api("/invoices?limit=1000" + (filter ? `&status=${filter}` : ""));
+  if (q) list = list.filter(i => [i.vendor_name, i.invoice_number, "#" + i.id].some(v => String(v || "").toLowerCase().includes(q)));
   $("#view").innerHTML = `<div style="margin-bottom:10px;max-width:220px"><select id="statusFilter">
       ${["", "approved", "pending_review", "rejected"].map(s => `<option value="${s}" ${s === filter ? "selected" : ""}>${s ? s.replace("_", " ") : "All statuses"}</option>`).join("")}
     </select></div>` + (list.length ? `<table><thead><tr><th>#</th><th>Vendor</th><th>Invoice</th><th>Amount</th><th>Risk</th><th>System decision</th><th>Status</th><th>Reviewed by</th></tr></thead><tbody>` +
@@ -240,20 +351,90 @@ async function loadDemo() {
 }
 
 // ---------- wiring
+// ---------- vendors, reports, audit logs, settings
+const table = (head, rows, empty) => rows.length ? `<table><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>` : `<div class="empty">${empty}</div>`;
+const day = t => (t || "").slice(0, 10) || "-";
+
+async function renderVendors() {
+  const list = await api("/vendors");
+  $("#view").innerHTML = `<h2 class="hello">Vendors</h2><div class="muted" style="margin-bottom:12px">Spend excludes duplicates and rejected invoices.</div>` +
+    table(["Vendor", "Invoices", "Total spend", "Avg risk", "Pending", "Auto-approved", "Duplicates", "Last invoice"],
+      list.map(v => `<tr><td>${esc(v.vendor)}</td><td>${v.invoices}</td><td>${esc(money(v.total_spend, v.currency))}</td><td>${riskPill(v.avg_risk)}</td>
+        <td>${v.pending}</td><td>${Math.round(v.auto_approved / v.invoices * 100)}%</td><td>${v.duplicates}</td><td>${day(v.last_invoice)}</td></tr>`), "No vendors yet.");
+}
+
+async function renderAudit() {
+  const items = await api("/audit?limit=300");
+  const stages = [...new Set(items.map(i => i.stage))].sort();
+  const pick = $("#auditStage") ? $("#auditStage").value : "";
+  const shown = pick ? items.filter(i => i.stage === pick) : items;
+  $("#view").innerHTML = `<div class="row"><h2 class="hello">Audit logs</h2><select id="auditStage" style="max-width:200px"><option value="">All stages</option>
+    ${stages.map(x => `<option ${x === pick ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></div>` +
+    table(["Time", "Invoice", "Stage", "Action", "Actor", "ms"], shown.map(i => `<tr><td>${esc((i.timestamp || "").replace("T", " ").slice(0, 19))}</td>
+      <td>${i.invoice_id ? `<a href="#" data-action="audit-id" data-id="${i.invoice_id}">#${i.invoice_id}</a>` : "-"}</td><td>${esc(i.stage)}</td><td>${esc(i.action)}</td>
+      <td>${esc(i.actor)}</td><td>${i.duration_ms ?? "-"}</td></tr>`), "No activity yet.");
+}
+
+async function downloadCsv() {
+  const key = sessionStorage.getItem("opspilot_key");
+  const r = await fetch("/invoices.csv", { headers: key ? { "X-API-Key": key } : {} });
+  if (!r.ok) return alert("Export failed (" + r.status + ")");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = "opspilot-invoices.csv"; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function renderReports() {
+  const st = stats, sv = st.estimated_savings, rate = st.automation_rate;
+  const card = (cls, label, val, note) => `<div class="kpi ${cls}"><span>${label}</span><b>${val}</b><small>${note}</small></div>`;
+  $("#view").innerHTML = `<div class="row"><h2 class="hello">Reports</h2><button class="primary" data-action="csv">Export invoices (CSV)</button></div>
+    <div class="kpis">${card("g", "Automation rate", rate == null ? "-" : Math.round(rate * 100) + "%", "approved with no human")}
+      ${card("b", "Time saved (est.)", sv.hours + " h", "about " + sv.cost + " in cost")}
+      ${card("p", "Duplicates caught", st.duplicates, "kept out of payment")}
+      ${card("r", "High risk", st.high_risk, "risk at or above " + st.high_risk_threshold)}
+      ${card("a", "Avg processing", (st.avg_pipeline_ms_per_email ?? "-") + " ms", "per email, all stages")}</div>
+    <p class="muted" style="font-size:12px">${esc(sv.assumptions)}. Savings are an estimate, not a measurement. The CSV has one row per invoice; text cells that start with = + - or @ are prefixed with an apostrophe so spreadsheets cannot run them as formulas.</p>`;
+}
+
+const SETTING_LABELS = { auto_approve_max_risk: "Auto-approve only if risk is at most", auto_reject_min_risk: "Reject automatically if risk is at least",
+  auto_approve_max_amount: "Never auto-approve above this amount", new_vendor_review_amount: "First invoice from a new vendor is reviewed above",
+  classifier_min_confidence: "Minimum email-classifier confidence", max_payment_terms_days: "Payment terms flagged above (days)",
+  max_reasonable_amount: "Amounts above this fail the sanity check", allowed_currencies: "Accepted currencies" };
+
+async function renderSettings() {
+  const c = await api("/settings");
+  const rows = o => Object.entries(o).map(([k, v]) => `<tr><td>${esc(SETTING_LABELS[k] || k.replace(/_/g, " "))}</td><td><b>${esc(v)}</b></td></tr>`).join("");
+  $("#view").innerHTML = `<h2 class="hello">Settings</h2><div class="muted" style="margin-bottom:12px">Read-only. Rules are changed in configuration (OPSPILOT_* environment variables), not from this page, because there are no user accounts yet.</div>
+    <h3>Decision rules</h3><table><tbody>${rows(c.thresholds)}<tr><td>Flagged "high risk" at</td><td><b>${c.high_risk_at}</b></td></tr></tbody></table>
+    <h3>Validation rules (fixed in code)</h3><table><tbody>${rows(c.validation_rules)}</tbody></table>
+    <h3>How much each signal can add to the risk score (at most)</h3><table><tbody>${rows(c.risk_weights)}</tbody></table>
+    <h3>Mode</h3><table><tbody><tr><td>Public demo mode</td><td><b>${c.demo_mode ? "on" : "off"}</b></td></tr><tr><td>API key required</td><td><b>${c.auth_required ? "yes" : "no"}</b></td></tr></tbody></table>`;
+}
+
 async function refresh() {
-  try { await Promise.all([loadMetrics(), tab === "queue" ? renderQueue() : renderAll()]); }
+  try {
+    await loadStats();
+    const PAGES = { home: renderHome, process: renderProcess, queue: renderQueue, all: renderAll, vendors: renderVendors,
+                    reports: renderReports, audit: renderAudit, settings: renderSettings };
+    await (PAGES[tab] || renderAll)();
+  }
   catch (e) { $("#view").innerHTML = `<div class="empty">Could not reach the API: ${esc(e.message)}</div>`; }
 }
 document.addEventListener("click", e => {
   const t = e.target;
-  if (t.dataset.tab) { tab = t.dataset.tab; document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b === t)); refresh(); }
+  const nav = t.closest("[data-tab]");
+  if (nav) { tab = nav.dataset.tab; document.querySelectorAll(".nav").forEach(b => b.classList.toggle("active", b.dataset.tab === tab)); refresh(); }
+  else if (t.dataset.action === "audit-id") { e.preventDefault(); showAudit(t.dataset.id); }
+  else if (t.dataset.action === "csv") downloadCsv();
   else if (t.dataset.action) {
     const card = t.closest(".item");
     if (t.dataset.action === "audit") showAudit(card.dataset.id); else submitReview(card, t.dataset.action);
   } else if (t.closest("tbody tr")) showAudit(t.closest("tr").dataset.id);
 });
-document.addEventListener("change", e => { if (e.target.id === "statusFilter") { filter = e.target.value; renderAll(); } });
+document.addEventListener("change", e => { if (e.target.id === "auditStage") renderAudit(); if (e.target.id === "statusFilter") { filter = e.target.value; renderAll(); } });
+$("#search").addEventListener("input", () => { if (tab !== "all") { tab = "all"; document.querySelectorAll(".nav").forEach(b => b.classList.toggle("active", b.dataset.tab === "all")); } renderAll(); });
 $("#refresh").onclick = refresh; $("#demo").onclick = loadDemo; $("#closeAudit").onclick = () => $("#audit").close();
+fetch("/health").then(r => r.json()).then(h => {
+  if (h.demo_mode) { const b = $("#banner"); b.hidden = false; b.textContent = "Public demo with sample data. Anything you do here is wiped automatically every hour."; }
+}).catch(() => {});
 refresh();
 </script>
 </body>

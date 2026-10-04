@@ -1,0 +1,54 @@
+# docker compose up --build            -> API + dashboard at http://localhost:8000 and a folder watcher on ./inbox
+# docker compose --profile mail up     -> additionally poll an IMAP mailbox (set OPSPILOT_IMAP_* in .env)
+# Variables below are read from your shell or from a .env file next to this file.
+services:
+  api:
+    build: .
+    image: opspilot:latest
+    ports:
+      - "8000:8000"
+    environment:
+      OPSPILOT_DEMO_MODE: "${OPSPILOT_DEMO_MODE:-false}"
+      OPSPILOT_API_KEY: "${OPSPILOT_API_KEY:-}"
+    volumes:
+      - opspilot-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  watcher:                      # drop .eml files into ./inbox and they are processed within seconds
+    image: opspilot:latest
+    command: ["python", "-m", "app.ingestion.folder", "inbox", "--watch", "5"]
+    environment:
+      OPSPILOT_API_URL: "http://api:8000"
+      OPSPILOT_API_KEY: "${OPSPILOT_API_KEY:-}"
+    volumes:
+      - ./inbox:/app/inbox
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mailbox:                      # optional: real IMAP polling
+    image: opspilot:latest
+    profiles: ["mail"]
+    command: ["python", "-m", "app.ingestion.poll"]
+    environment:
+      OPSPILOT_API_URL: "http://api:8000"
+      OPSPILOT_API_KEY: "${OPSPILOT_API_KEY:-}"
+      OPSPILOT_IMAP_HOST: "${OPSPILOT_IMAP_HOST:-}"
+      OPSPILOT_IMAP_PORT: "${OPSPILOT_IMAP_PORT:-993}"
+      OPSPILOT_IMAP_USER: "${OPSPILOT_IMAP_USER:-}"
+      OPSPILOT_IMAP_PASSWORD: "${OPSPILOT_IMAP_PASSWORD:-}"
+      OPSPILOT_IMAP_FOLDER: "${OPSPILOT_IMAP_FOLDER:-INBOX}"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  opspilot-data:
