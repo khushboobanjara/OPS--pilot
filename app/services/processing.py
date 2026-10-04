@@ -1,6 +1,7 @@
 """Application service: runs the pipeline AND persists the outcome, plus the human-review
 workflow, audit trail and metrics. The API layer stays a thin wrapper around this."""
 from collections import defaultdict
+from datetime import timezone
 
 from sqlalchemy import func
 
@@ -15,6 +16,13 @@ HOURLY_COST = 30.0
 
 class NotFound(Exception):
     pass
+
+
+def _utc_naive(dt):
+    """The DB stores naive UTC; convert aware datetimes instead of silently dropping their offset."""
+    if dt is not None and dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
 
 
 def _iso(dt):
@@ -56,7 +64,8 @@ def process_email(pipeline, raw: dict) -> dict:
             received_at = email.received_at
         else:
             email = Email(message_id=raw["message_id"], sender=raw.get("sender", ""),
-                          subject=raw.get("subject", ""), body=raw.get("body", ""))
+                          subject=raw.get("subject", ""), body=raw.get("body", ""),
+                          received_at=_utc_naive(raw.get("received_at")) or utcnow())
             s.add(email)
             s.commit()
             email_id = email.id

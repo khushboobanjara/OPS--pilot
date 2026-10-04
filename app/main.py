@@ -1,6 +1,7 @@
 """OpsPilot AI HTTP API.   Run:  uvicorn app.main:app --reload
 Dashboard: http://127.0.0.1:8000/     API docs: http://127.0.0.1:8000/docs"""
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Literal
 
@@ -19,6 +20,7 @@ class EmailIn(BaseModel):
     sender: str = ""
     subject: str = ""
     body: str = ""
+    received_at: datetime | None = None    # when the mail server received it; defaults to "now"
 
 
 class Corrections(BaseModel):

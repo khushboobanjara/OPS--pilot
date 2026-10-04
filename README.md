@@ -154,11 +154,43 @@ pytest -q
 | `GET /invoices`, `/invoices/{id}`, `/invoices/{id}/audit` | Records and the full audit trail |
 | `GET /metrics` | Automation rate, pending reviews, processing time, estimated savings |
 
+## Mailbox integration
+
+`python -m app.ingestion.poll` reads a real IMAP inbox and sends each new email to `POST /emails`, so invoices arrive without anyone posting JSON by hand.
+
+```
+cp .env.example .env               # fill in a THROWAWAY mailbox (Gmail needs an App Password)
+uvicorn app.main:app               # terminal 1: the API
+python -m app.ingestion.poll       # terminal 2: poll every 60 s (add --once for a single pass)
+python -m scripts.send_test_emails --count 5 --pdf    # optional: mail yourself sample invoices
+```
+
+Behaviour worth knowing:
+
+- **Arrival time comes from the mail server (IMAP INTERNALDATE), not the `Date` header**, because the burst detector depends on it and a sender can forge a header.
+- **Safe to retry.** Mail is fetched with `BODY.PEEK` and marked read only after the API accepted it. If the API is down the mail stays unread and the next cycle retries; the API is idempotent on `message_id`, so a crash can never create a second invoice.
+- **One bad email cannot block the queue.** If the API rejects a message it is flagged in the mailbox and skipped from then on.
+- **Attachments.** Text PDFs are read (first 10 pages, up to 10 MB) and appended to the body. Scans, images and other types are noted in the body, so the reviewer sees what could not be read and the invoice goes to review for missing fields.
+- Credentials are read from environment variables or a git-ignored `.env`, held as secrets and never logged.
+
+### No mail account? Use .eml files
+
+The same parsing and API path works from a folder of saved emails, with no login:
+
+```
+python -m scripts.send_test_emails --count 6 --pdf --out-dir inbox    # make sample invoice emails
+python -m app.ingestion.folder inbox                                   # API must be running
+```
+
+Processed files move to `inbox/processed/`, rejected ones to `inbox/rejected/`, and files stay put if the API is down. Any mail client can export a message as `.eml`, so this also works for real emails.
+
+Tested with a fake IMAP server that mimics the `imaplib` response shapes, plus an end-to-end test through the real API. It has not been run against every provider, so treat the first run on a new mailbox as a test.
+
 ## Project layout
 
 ```
 app/
-  ingestion/     PDF text extraction
+  ingestion/     PDF text extraction, IMAP mailbox poller
   extraction/    regex extractor, learned extractor (candidates + per-field classifiers), test oracle
   validation/    business-rule checks on extracted data
   duplicates/    fuzzy duplicate matching
@@ -182,4 +214,4 @@ tests/           unit tests and API tests
 - Bursts are only partly detectable from counts (12 of 25 still leak on busy vendors), mild spikes within a vendor's natural variation still leak, and the Isolation Forest used in the end-to-end replay is trained on the same data it is scored on.
 - Duplicate lookup loads all stored invoices, which will not scale; narrow it in SQL.
 - No authentication, so the reviewer name is trusted as typed. No database migrations (a production system would use Alembic).
-- No live mailbox integration yet; emails are posted to the API.
+- The mailbox poller is IMAP only, polling rather than push, and needs an app password; OAuth (Gmail API, Microsoft Graph) would be the production route. Scanned PDFs and images are not read (no OCR).
