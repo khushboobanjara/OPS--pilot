@@ -1,4 +1,5 @@
 """Train the email classifier.   Run:  python -m app.ml.train_classifier"""
+import argparse
 import json
 from pathlib import Path
 
@@ -20,8 +21,9 @@ def email_text(e: dict) -> str:
     return f"{e['subject']} {e['subject']} {e['body']}"
 
 
-def main() -> None:
-    rows = [json.loads(line) for line in DATA.read_text().splitlines()]
+def main(data: Path = DATA, model_out: str | None = None) -> None:
+    model_out = model_out or settings.classifier_model_path
+    rows = [json.loads(line) for line in data.read_text().splitlines()]
     X = [email_text(r) for r in rows]
     y = [r["category"] for r in rows]
 
@@ -35,7 +37,7 @@ def main() -> None:
 
     pred = model.predict(X_te)
     print(classification_report(y_te, pred, digits=3))
-    labels = list(model.classes_)
+    labels = [str(c) for c in model.classes_]
     print("Labels:", labels)
     print(confusion_matrix(y_te, pred, labels=labels))
 
@@ -48,10 +50,14 @@ def main() -> None:
           f"accuracy on those = {correct[kept].mean():.1%}, "
           f"sent to review = {(~kept).mean():.1%}")
 
-    Path(settings.classifier_model_path).parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, settings.classifier_model_path)
-    print(f"Saved model to {settings.classifier_model_path}")
+    Path(model_out).parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, model_out)
+    print(f"Saved model to {model_out}")
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", type=Path, default=DATA)
+    ap.add_argument("--model-out", default=None, help="default: the model path from settings")
+    a = ap.parse_args()
+    main(a.data, a.model_out)

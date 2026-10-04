@@ -5,11 +5,20 @@ REQUIRED = ["vendor_name", "invoice_number", "total_amount", "due_date"]
 RECOMMENDED = ["invoice_date", "currency"]  # po_number is genuinely optional
 
 
+def regex_extractor(email: dict) -> dict:
+    return extract_fields(email.get("subject", ""), email.get("body", ""))
+
+
 class ExtractStage(Stage):
     name = "extract"
 
+    def __init__(self, extractor=regex_extractor):
+        """`extractor(email_dict) -> {field: Field | None}`. Swappable so a learned extractor (or the
+        ground-truth oracle used in evaluation) can replace the regex without touching the pipeline."""
+        self.extractor = extractor
+
     def run(self, ctx: PipelineContext) -> PipelineContext:
-        fields = extract_fields(ctx.email.get("subject", ""), ctx.email.get("body", ""))
+        fields = self.extractor(ctx.email)
 
         ctx.invoice = {k: (f.value if f else None) for k, f in fields.items()}
         ctx.invoice["field_confidence"] = {k: (f.confidence if f else 0.0) for k, f in fields.items()}

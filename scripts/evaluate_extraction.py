@@ -1,4 +1,5 @@
 """Score the extractor against ground truth.   Run: python -m scripts.evaluate_extraction"""
+import argparse
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -14,8 +15,8 @@ def same(a, b):
     return a == b
 
 
-def main():
-    rows = [json.loads(l) for l in Path("data/synthetic_emails.jsonl").read_text().splitlines()]
+def main(data: Path = Path("data/synthetic_emails.jsonl")):
+    rows = [json.loads(l) for l in data.read_text().splitlines()]
     rows = [r for r in rows if r["category"] == "invoice"]
     stat = defaultdict(lambda: {"correct": 0, "wrong": 0, "missing": 0})
     hi = {"n": 0, "ok": 0}
@@ -46,4 +47,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", type=Path, default=Path("data/synthetic_emails.jsonl"))
+    main(ap.parse_args().data)

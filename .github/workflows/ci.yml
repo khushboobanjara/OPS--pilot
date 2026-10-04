@@ -18,6 +18,7 @@ jobs:
         run: |
           python -m app.ml.train_classifier
           python -m app.ml.train_anomaly
+          python -m app.ml.train_extractor
       - name: Tests
         run: pytest -q
       - name: Evaluation report

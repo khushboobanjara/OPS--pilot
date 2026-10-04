@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Train the models at build time so the container starts ready to use
-RUN python -m app.ml.train_classifier && python -m app.ml.train_anomaly
+RUN python -m app.ml.train_classifier && python -m app.ml.train_anomaly && python -m app.ml.train_extractor
 
 # Keep the SQLite database on a volume so data survives container restarts
 ENV OPSPILOT_DATABASE_URL=sqlite:////data/opspilot.db
