@@ -3,7 +3,7 @@ workflow, audit trail and metrics. The API layer stays a thin wrapper around thi
 from collections import defaultdict
 from datetime import timezone
 
-from sqlalchemy import func
+from sqlalchemy import case, func
 
 from app.db import AuditLog, Email, Invoice, SessionLocal, utcnow
 from app.pipeline.base import PipelineContext
@@ -222,3 +222,37 @@ def metrics() -> dict:
             "assumptions": f"{MANUAL_MINUTES_PER_INVOICE:g} min manual effort per invoice at {HOURLY_COST:g}/hour",
             "note": "estimate, not a measurement"},
     }
+
+
+HIGH_RISK = 0.60
+
+
+def stats() -> dict:
+    """Everything the dashboard's home page needs in one call (so the page makes one request, not six)."""
+    m = metrics()
+    with SessionLocal() as s:
+        rows = s.query(Invoice.decision, Invoice.status, Invoice.duplicate_of, Invoice.risk_score).all()
+        categories = dict(s.query(Email.category, func.count(Email.id)).group_by(Email.category).all())
+        day = func.date(Email.received_at)
+        timeline = (s.query(day, func.count(Invoice.id), func.sum(case((Invoice.decision == "auto_approved", 1), else_=0)))
+                    .join(Email, Email.id == Invoice.email_id).group_by(day).order_by(day).all())
+        recent = [invoice_to_dict(r) for r in s.query(Invoice).order_by(Invoice.id.desc()).limit(6).all()]
+
+    # Mutually exclusive slices that add up to the total (a duplicate is counted only as a duplicate)
+    donut = {"auto_processed": 0, "approved_by_reviewer": 0, "pending_review": 0, "rejected": 0, "duplicates": 0}
+    for decision, status, dup, _ in rows:
+        if dup is not None:
+            donut["duplicates"] += 1
+        elif decision == "auto_approved":
+            donut["auto_processed"] += 1
+        elif status == "approved":
+            donut["approved_by_reviewer"] += 1
+        elif status == "pending_review":
+            donut["pending_review"] += 1
+        else:
+            donut["rejected"] += 1
+    return {**m, "donut": donut, "duplicates": donut["duplicates"],
+            "high_risk": sum(1 for r in rows if (r[3] or 0) >= HIGH_RISK), "high_risk_threshold": HIGH_RISK,
+            "categories": {(k or "unclassified"): v for k, v in categories.items()},
+            "timeline": [{"date": str(d), "invoices": n, "auto_approved": int(a or 0)} for d, n, a in timeline],
+            "recent": recent}

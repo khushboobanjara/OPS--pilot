@@ -154,6 +154,28 @@ pytest -q
 | `GET /invoices`, `/invoices/{id}`, `/invoices/{id}/audit` | Records and the full audit trail |
 | `GET /metrics` | Automation rate, pending reviews, processing time, estimated savings |
 
+## Run it with Docker
+
+```
+docker compose up --build              # API + dashboard on http://localhost:8000, plus a watcher on ./inbox
+docker compose --profile mail up       # also poll an IMAP mailbox (OPSPILOT_IMAP_* in .env)
+```
+
+Drop `.eml` files into `./inbox` and they are processed within seconds. Models are trained while the image builds, and the SQLite database lives in a Docker volume.
+
+## Security and public demo mode
+
+The API has no users or roles, so **do not expose it to the internet as is.** Two switches cover the two cases:
+
+| Setting | Use it for | What it does |
+| --- | --- | --- |
+| `OPSPILOT_API_KEY=...` | a private deployment | every API call must send header `X-API-Key`; the dashboard asks for the key once per tab |
+| `OPSPILOT_DEMO_MODE=true` | a public showcase | loads sample data on start, rate-limits writes (60 per minute per IP), wipes and reseeds every hour, shows a banner |
+
+Always on: request bodies over 1 MB get 413, and field lengths are capped (body 200,000 characters). The key is compared in constant time and never logged.
+
+Known limits, stated plainly: there are still no user accounts (a reviewer's name is typed in, not verified), the size cap relies on the `Content-Length` header so keep a proxy limit in front of anything public, and behind a reverse proxy run uvicorn with `--proxy-headers` so the rate limit sees real client IPs. Demo mode resets the database, so never point it at real data.
+
 ## Mailbox integration
 
 `python -m app.ingestion.poll` reads a real IMAP inbox and sends each new email to `POST /emails`, so invoices arrive without anyone posting JSON by hand.

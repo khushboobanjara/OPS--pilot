@@ -127,8 +127,8 @@ def build_payload(raw: bytes, internal_date: datetime | None = None) -> dict:
     body = "\n\n".join(filter(None, [_body_text(msg), *_attachment_texts(msg)]))[:MAX_BODY_CHARS]
     return {
         "message_id": _message_id(msg, raw),
-        "sender": parseaddr(str(msg.get("From", "")))[1],
-        "subject": re.sub(r"\s+", " ", str(msg.get("Subject", ""))).strip(),
+        "sender": parseaddr(str(msg.get("From", "")))[1][:200],
+        "subject": re.sub(r"\s+", " ", str(msg.get("Subject", ""))).strip()[:500],
         "body": body,
         "received_at": received.isoformat() if received else None,
     }
@@ -143,9 +143,9 @@ class Rejected(Exception):
     """The API refused this particular email (4xx): flag it and move on."""
 
 
-def http_submit(base_url: str, timeout: float = 60.0) -> Callable[[dict], dict]:
+def http_submit(base_url: str, timeout: float = 60.0, api_key: str | None = None) -> Callable[[dict], dict]:
     import httpx
-    client = httpx.Client(base_url=base_url, timeout=timeout)
+    client = httpx.Client(base_url=base_url, timeout=timeout, headers={"X-API-Key": api_key} if api_key else {})
 
     def submit(payload: dict) -> dict:
         try:
