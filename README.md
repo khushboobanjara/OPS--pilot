@@ -92,6 +92,24 @@ The regex extractor is the main weakness on messy mail, so I replaced it with a 
 - Weaknesses: a date format the candidate generator does not know (for example `01-Mar-2026`) is invisible to it, and invoice-number accuracy falls to 79% on unseen introductory phrasing. The PO-number figure is trivial because the synthetic data contains no PO-like decoys.
 - The end-to-end comparison uses the plain z-score anomaly rule, so the three rows differ only in extraction. Report: [`docs/results/extractors.txt`](docs/results/extractors.txt).
 
+### Anomaly detection v2: bursts and new vendors
+
+The first version judged only the amount. Two leaks stood out in the hard-data results with true fields: bursts (25 of 40 leaked bad invoices) and first invoices from unknown vendors (6). Two additions, both visible in the audit log and the risk breakdown:
+
+- **Burst signal** (`app/anomaly/burst.py`): compares how many invoices a vendor has sent today (including pending and rejected ones, because they did arrive) with that vendor's own normal daily rate, using a Poisson tail probability. It is a soft signal feeding the risk engine (weight 0.6), and stays silent until a vendor has 10 approved invoices.
+- **New-vendor rule** (`app/risk/decision.py`): a first invoice from a vendor with too little history, above 2,000, always goes to a human.
+
+| Hard data, true fields | Before | After |
+| --- | --- | --- |
+| Auto-approved | 87.5% | 83.3% |
+| Bad invoices auto-approved | 40 of 173 | 20 of 173 |
+| of which bursts / new vendors | 25 / 6 | 12 / 0 |
+| Good invoices sent to a human | 4.2% | 7.4% |
+
+Easy data is unchanged on leakage (0 of 78), with good invoices sent to a human rising from 4.1% to 5.0% because of the new-vendor rule.
+
+**This is a trade-off, not a free win.** Every burst in the synthetic data comes from a busy vendor (about 0.5 invoices a day), and busy vendors legitimately send several invoices on one day, so count alone cannot separate a burst from natural clustering. Sensitivity is set by `SIGNAL_START` in `burst.py`; on the first 70% of the timeline, moving it from 2.2 (effectively off) to 1.2 cut leaks from 26 to 17 and raised the false-alarm rate from 6.3% to 8.3%. Choose the setting from what a missed invoice costs compared with a six-minute review. The default of 1.2 was fixed before sweeping, but the sweep and the table above use the same synthetic dataset.
+
 **Read these numbers honestly.** All data is synthetic. The injected anomalies and duplicates follow patterns I chose, so the figures show how the pipeline behaves and where it breaks, not production accuracy. The Isolation Forest in the end-to-end run is trained on the same data it is scored on. The time saving shown in the dashboard assumes 6 minutes of manual work per invoice at 30 per hour; it is an estimate, not a measurement.
 
 ## Quick start
@@ -161,7 +179,7 @@ tests/           unit tests and API tests
 
 - Synthetic data only; real invoices are messier (layouts, scans, multiple currencies and languages).
 - The learned extractor is trained on templated synthetic text and cannot read date formats it has no candidate rule for. Next: train on real invoices, add layout-aware features for PDFs, and try an LLM-based extractor scored with the same comparison script.
-- Anomaly detection looks at the amount only, so invoice bursts are invisible (0 of 6 caught) and a new vendor's first three invoices cannot be judged. Timing and new-vendor features are the obvious additions.
+- Bursts are only partly detectable from counts (12 of 25 still leak on busy vendors), mild spikes within a vendor's natural variation still leak, and the Isolation Forest used in the end-to-end replay is trained on the same data it is scored on.
 - Duplicate lookup loads all stored invoices, which will not scale; narrow it in SQL.
 - No authentication, so the reviewer name is trusted as typed. No database migrations (a production system would use Alembic).
 - No live mailbox integration yet; emails are posted to the API.

@@ -14,6 +14,7 @@ class Thresholds:
     auto_reject_min_risk: float = 0.85
     auto_approve_max_amount: float = 10_000.0   # business policy: bigger invoices always get human eyes
     severe_validation: float = 0.70             # validation signal at/above this blocks auto-approval
+    new_vendor_review_amount: float = 2_000.0   # first invoices from an unknown vendor above this get human eyes
 
 
 @dataclass
@@ -49,6 +50,11 @@ def decide(invoice: dict, signals: dict[str, float], score: float,
     if invoice["total_amount"] > t.auto_approve_max_amount:
         return Decision("human_review", score, "amount_above_auto_limit",
                         [f"Amount {invoice['total_amount']:,.2f} is above the auto-approval limit of {t.auto_approve_max_amount:,.0f}"])
+
+    if signals.get("new_vendor", 0.0) >= 1.0 and invoice["total_amount"] > t.new_vendor_review_amount:
+        return Decision("human_review", score, "new_vendor_large_amount",
+                        [f"Unknown vendor with little history and amount {invoice['total_amount']:,.2f} "
+                         f"above {t.new_vendor_review_amount:,.0f} - first invoices are checked by a person"])
 
     if score >= t.auto_reject_min_risk:
         return Decision("rejected", score, "risk_above_reject_threshold",

@@ -53,16 +53,19 @@ def process_email(pipeline, raw: dict) -> dict:
                         "invoice": invoice_to_dict(inv) if inv else None,
                         "flags": inv.flags if inv else [], "already_processed": True}
             email_id = email.id            # stored earlier but never finished: process it now
+            received_at = email.received_at
         else:
             email = Email(message_id=raw["message_id"], sender=raw.get("sender", ""),
                           subject=raw.get("subject", ""), body=raw.get("body", ""))
             s.add(email)
             s.commit()
             email_id = email.id
+            received_at = email.received_at
 
     # Pipeline runs outside the session; it opens its own short sessions for audit rows.
     ctx = pipeline.run(PipelineContext(
-        email={"subject": raw.get("subject", ""), "body": raw.get("body", ""), "sender": raw.get("sender", "")},
+        email={"subject": raw.get("subject", ""), "body": raw.get("body", ""), "sender": raw.get("sender", ""),
+               "received_at": received_at},
         email_id=email_id))
 
     with SessionLocal() as s:
