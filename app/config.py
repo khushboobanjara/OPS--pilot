@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     auto_approve_max_risk: float = 0.30
     auto_reject_min_risk: float = 0.85
     auto_approve_max_amount: float = 10000.0
+    new_vendor_review_amount: float = 2000.0
 
     model_config = {"env_prefix": "OPSPILOT_"}
 

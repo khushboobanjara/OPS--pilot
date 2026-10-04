@@ -68,23 +68,23 @@ END TO END DECISIONS
 ======================================================================
 816 invoices replayed | thresholds: approve<=0.3 reject>=0.85 amount cap 10,000
 
-Decisions: {'auto_approved': 708, 'human_review': 61, 'rejected': 47}
-Automation rate:      86.8%  (708 of 816 approved with no human touch)
+Decisions: {'auto_approved': 701, 'human_review': 68, 'rejected': 47}
+Automation rate:      85.9%  (701 of 816 approved with no human touch)
 Leakage:              0 of 78 bad invoices were auto-approved
-False alarms:         30 of 738 good invoices went to a human or were rejected (4.1%)
-Rules behind false alarms: {'risk_above_approve_threshold': 30}
+False alarms:         37 of 738 good invoices went to a human or were rejected (5.0%)
+Rules behind false alarms: {'new_vendor_large_amount': 9, 'risk_above_approve_threshold': 28}
 Duplicates:           47 rejected, 0 sent to review, 0 leaked, of 47
 Anomalies:            31 stopped (review or reject), 0 leaked, of 31
 
-Estimated saving: 708 auto-approved x 6 min = 70.8 h = $2,124 at $30/h  (assumptions, not measured)
+Estimated saving: 701 auto-approved x 6 min = 70.1 h = $2,103 at $30/h  (assumptions, not measured)
 
 Threshold sweep (auto_approve_max_risk):
   threshold  automation  leakage  false_alarm_rate
   0.1            69.9%        0            22.8%
-  0.15           72.5%        0            19.8%
-  0.2            74.0%        0            18.2%
-  0.25           85.4%        0             5.6%
-  0.3            86.8%        0             4.1%
-  0.4            88.4%        0             2.3%
-  0.5            89.7%        0             0.8%
-  0.6            90.1%        0             0.4%
+  0.15           71.9%        0            20.5%
+  0.2            73.2%        0            19.1%
+  0.25           84.6%        0             6.5%
+  0.3            85.9%        0             5.0%
+  0.4            87.3%        0             3.5%
+  0.5            88.6%        0             2.0%
+  0.6            89.0%        0             1.6%

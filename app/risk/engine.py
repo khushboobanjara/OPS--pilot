@@ -9,6 +9,7 @@ Method: weighted noisy-OR.   risk = 1 - prod(1 - weight_i * signal_i)
 WEIGHTS = {
     "duplicate": 0.95,
     "anomaly": 0.80,
+    "burst": 0.60,
     "validation_issues": 0.80,
     "extraction_uncertainty": 0.60,
 }

@@ -38,24 +38,24 @@ END TO END DECISIONS
 ======================================================================
 1518 invoices replayed | thresholds: approve<=0.3 reject>=0.85 amount cap 10,000
 
-Decisions: {'auto_approved': 1329, 'human_review': 125, 'rejected': 64}
-Automation rate:      87.5%  (1329 of 1518 approved with no human touch)
-Leakage:              40 of 173 bad invoices were auto-approved
-   leaked by kind: {'spike_mild': 6, 'burst': 25, 'new_vendor': 6, 'vendor_variant': 3}
-False alarms:         56 of 1345 good invoices went to a human or were rejected (4.2%)
-Rules behind false alarms: {'risk_above_approve_threshold': 53, 'amount_above_auto_limit': 1, 'risk_above_reject_threshold': 2}
-Duplicates:           62 rejected, 14 sent to review, 3 leaked, of 79
-Anomalies:            57 stopped (review or reject), 37 leaked, of 94
+Decisions: {'human_review': 189, 'auto_approved': 1265, 'rejected': 64}
+Automation rate:      83.3%  (1265 of 1518 approved with no human touch)
+Leakage:              20 of 173 bad invoices were auto-approved
+   leaked by kind: {'spike_mild': 6, 'burst': 12, 'vendor_variant': 2}
+False alarms:         100 of 1345 good invoices went to a human or were rejected (7.4%)
+Rules behind false alarms: {'new_vendor_large_amount': 12, 'risk_above_approve_threshold': 85, 'amount_above_auto_limit': 1, 'risk_above_reject_threshold': 2}
+Duplicates:           62 rejected, 15 sent to review, 2 leaked, of 79
+Anomalies:            76 stopped (review or reject), 18 leaked, of 94
 
-Estimated saving: 1329 auto-approved x 6 min = 132.9 h = $3,987 at $30/h  (assumptions, not measured)
+Estimated saving: 1265 auto-approved x 6 min = 126.5 h = $3,795 at $30/h  (assumptions, not measured)
 
 Threshold sweep (auto_approve_max_risk):
   threshold  automation  leakage  false_alarm_rate
-  0.1            80.6%       26            10.9%
-  0.15           84.3%       36             7.5%
-  0.2            85.6%       38             6.2%
-  0.25           86.6%       39             5.1%
-  0.3            87.5%       40             4.2%
-  0.4            88.9%       43             2.8%
-  0.5            89.8%       44             1.9%
-  0.6            90.3%       47             1.6%
+  0.1            77.1%       12            13.8%
+  0.15           79.7%       16            11.2%
+  0.2            81.0%       18             9.9%
+  0.25           82.1%       19             8.8%
+  0.3            83.3%       20             7.4%
+  0.4            85.6%       27             5.4%
+  0.5            87.4%       30             3.6%
+  0.6            88.5%       35             2.8%

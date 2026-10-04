@@ -13,6 +13,7 @@ invoices that end up approved, assuming reviewers approve good invoices and reje
 import argparse
 import json
 from collections import Counter, defaultdict
+from datetime import date
 from pathlib import Path
 
 from app.pipeline.anomaly import AnomalyStage
@@ -33,16 +34,20 @@ def replay(data: Path, anomaly_model: str | None, oracle: bool = False, extracto
     rows = [json.loads(l) for l in data.read_text().splitlines() if l.strip()]
     inv_history: list[dict] = []
     amounts: dict[str, list[float]] = defaultdict(list)
+    activity: dict[str, list] = defaultdict(list)     # vendor -> [(arrival date, approved?)] for burst detection
+    has_dates = all("received" in r for r in rows if r["category"] == "invoice")   # old datasets carry no dates: no bursts
     extract_stage = ExtractStage(extractor) if extractor else (ExtractStage(oracle_extractor) if oracle else ExtractStage())
     stages = [extract_stage, ValidateStage(),
               DuplicateStage(history_provider=lambda inv: inv_history),
-              AnomalyStage(history_provider=lambda v: amounts[v], model_path=anomaly_model),
+              AnomalyStage(history_provider=lambda v: amounts[v], model_path=anomaly_model,
+                           activity_provider=lambda v: activity[v] if has_dates else []),
               RiskStage()]
     out = []
     for r in rows:
         if r["category"] != "invoice":
             continue
-        ctx = PipelineContext(email={"subject": r["subject"], "body": r["body"], "_truth": r["truth"]})
+        ctx = PipelineContext(email={"subject": r["subject"], "body": r["body"], "_truth": r["truth"],
+                                      **({"received": r["received"]} if has_dates else {})})
         for s in stages:
             ctx = s.run(ctx)
         inv = ctx.invoice
@@ -53,6 +58,8 @@ def replay(data: Path, anomaly_model: str | None, oracle: bool = False, extracto
         approved = d.outcome == "auto_approved" or (d.outcome == "human_review" and not bad)
         if approved and inv.get("total_amount") is not None and "duplicate_of" not in inv:
             amounts[inv.get("vendor_name")].append(inv["total_amount"])
+        if has_dates and "duplicate_of" not in inv:
+            activity[inv.get("vendor_name")].append((date.fromisoformat(r["received"]), approved))
         kind = r.get("dup_kind") or r.get("anomaly_kind") or ("twin" if r.get("twin") else None)
         out.append(dict(truth=r["truth"], bad=bad, dup=r["is_duplicate"], anom=r["is_anomaly"], kind=kind,
                         invoice=inv, signals=dict(ctx.risk_signals), score=inv["risk_score"], contrib=inv["risk_breakdown"]))

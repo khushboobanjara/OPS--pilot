@@ -8,6 +8,7 @@ def thresholds_from_settings() -> Thresholds:
         auto_approve_max_risk=settings.auto_approve_max_risk,
         auto_reject_min_risk=settings.auto_reject_min_risk,
         auto_approve_max_amount=settings.auto_approve_max_amount,
+        new_vendor_review_amount=settings.new_vendor_review_amount,
     )
 
 
