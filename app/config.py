@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -12,7 +13,18 @@ class Settings(BaseSettings):
     auto_approve_max_amount: float = 10000.0
     new_vendor_review_amount: float = 2000.0
 
-    model_config = {"env_prefix": "OPSPILOT_"}
+    # Mailbox integration (see .env.example). Credentials come from the environment or a git-ignored .env file.
+    imap_host: str = ""
+    imap_port: int = 993
+    imap_user: str = ""
+    imap_password: SecretStr = SecretStr("")
+    imap_folder: str = "INBOX"
+    api_url: str = "http://127.0.0.1:8000"
+    poll_interval_seconds: int = 60
+    smtp_host: str = "smtp.gmail.com"      # only used by scripts/send_test_emails.py
+    smtp_port: int = 465
+
+    model_config = {"env_prefix": "OPSPILOT_", "env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()
