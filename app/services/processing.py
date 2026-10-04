@@ -1,9 +1,11 @@
 """Application service: runs the pipeline AND persists the outcome, plus the human-review
 workflow, audit trail and metrics. The API layer stays a thin wrapper around this."""
+import csv
+import io
 from collections import defaultdict
 from datetime import timezone
 
-from sqlalchemy import func
+from sqlalchemy import case, func
 
 from app.db import AuditLog, Email, Invoice, SessionLocal, utcnow
 from app.pipeline.base import PipelineContext
@@ -222,3 +224,117 @@ def metrics() -> dict:
             "assumptions": f"{MANUAL_MINUTES_PER_INVOICE:g} min manual effort per invoice at {HOURLY_COST:g}/hour",
             "note": "estimate, not a measurement"},
     }
+
+
+HIGH_RISK = 0.60
+
+
+def stats() -> dict:
+    """Everything the dashboard's home page needs in one call (so the page makes one request, not six)."""
+    m = metrics()
+    with SessionLocal() as s:
+        rows = s.query(Invoice.decision, Invoice.status, Invoice.duplicate_of, Invoice.risk_score).all()
+        categories = dict(s.query(Email.category, func.count(Email.id)).group_by(Email.category).all())
+        day = func.date(Email.received_at)
+        timeline = (s.query(day, func.count(Invoice.id), func.sum(case((Invoice.decision == "auto_approved", 1), else_=0)))
+                    .join(Email, Email.id == Invoice.email_id).group_by(day).order_by(day).all())
+        recent = [invoice_to_dict(r) for r in s.query(Invoice).order_by(Invoice.id.desc()).limit(6).all()]
+
+    # Mutually exclusive slices that add up to the total (a duplicate is counted only as a duplicate)
+    donut = {"auto_processed": 0, "approved_by_reviewer": 0, "pending_review": 0, "rejected": 0, "duplicates": 0}
+    for decision, status, dup, _ in rows:
+        if dup is not None:
+            donut["duplicates"] += 1
+        elif decision == "auto_approved":
+            donut["auto_processed"] += 1
+        elif status == "approved":
+            donut["approved_by_reviewer"] += 1
+        elif status == "pending_review":
+            donut["pending_review"] += 1
+        else:
+            donut["rejected"] += 1
+    return {**m, "donut": donut, "duplicates": donut["duplicates"],
+            "high_risk": sum(1 for r in rows if (r[3] or 0) >= HIGH_RISK), "high_risk_threshold": HIGH_RISK,
+            "categories": {(k or "unclassified"): v for k, v in categories.items()},
+            "timeline": [{"date": str(d), "invoices": n, "auto_approved": int(a or 0)} for d, n, a in timeline],
+            "recent": recent}
+
+
+# ---------------------------------------------------------------- vendors, audit feed, export, settings
+def vendors() -> list[dict]:
+    """One row per vendor. Spend excludes duplicates and rejected invoices, so it is money actually owed."""
+    agg: dict[str, dict] = {}
+    with SessionLocal() as s:
+        rows = (s.query(Invoice.vendor_name, Invoice.currency, Invoice.total_amount, Invoice.risk_score, Invoice.decision,
+                        Invoice.status, Invoice.duplicate_of, Email.received_at)
+                .join(Email, Email.id == Invoice.email_id).all())
+    for name, cur, amt, risk, decision, status, dup, received in rows:
+        a = agg.setdefault(name or "Unknown vendor", {"vendor": name or "Unknown vendor", "currency": cur, "invoices": 0,
+                           "total_spend": 0.0, "pending": 0, "auto_approved": 0, "duplicates": 0, "_risk": [], "last_invoice": None})
+        a["invoices"] += 1
+        a["_risk"].append(risk or 0.0)
+        if dup is not None:
+            a["duplicates"] += 1
+        elif status != "rejected":
+            a["total_spend"] += amt or 0.0
+        a["pending"] += status == "pending_review"
+        a["auto_approved"] += decision == "auto_approved"
+        if received and (a["last_invoice"] is None or received > a["last_invoice"]):
+            a["last_invoice"] = received
+    out = []
+    for a in agg.values():
+        risks = a.pop("_risk")
+        a.update(avg_risk=round(sum(risks) / len(risks), 3), total_spend=round(a["total_spend"], 2),
+                 last_invoice=_iso(a["last_invoice"]))
+        out.append(a)
+    return sorted(out, key=lambda a: -a["total_spend"])
+
+
+def audit_feed(limit: int = 200, stage: str | None = None, actor: str | None = None) -> list[dict]:
+    """Newest-first activity across all invoices (pipeline stages and human actions)."""
+    with SessionLocal() as s:
+        q = s.query(AuditLog)
+        if stage:
+            q = q.filter(AuditLog.stage == stage)
+        if actor:
+            q = q.filter(AuditLog.actor == actor)
+        rows = q.order_by(AuditLog.id.desc()).limit(limit).all()
+        inv_by_email = {e: i for e, i in s.query(Invoice.email_id, Invoice.id).filter(
+            Invoice.email_id.in_({r.entity_id for r in rows if r.entity_type == "email"})).all()}
+    return [{"id": r.id, "timestamp": _iso(r.timestamp), "entity": f"{r.entity_type}:{r.entity_id}",
+             "invoice_id": r.entity_id if r.entity_type == "invoice" else inv_by_email.get(r.entity_id),
+             "stage": r.stage, "action": r.action, "actor": r.actor, "duration_ms": r.duration_ms} for r in rows]
+
+
+def _csv_safe(v):
+    """Spreadsheet apps execute cells starting with = + - @ as formulas, and vendor names come from
+    untrusted email, so defuse them with a leading apostrophe (OWASP CSV-injection guidance)."""
+    return "'" + v if isinstance(v, str) and v[:1] in ("=", "+", "-", "@", "\t", "\r") else v
+
+
+CSV_COLUMNS = ["id", "invoice_number", "vendor_name", "invoice_date", "due_date", "currency", "total_amount", "po_number",
+               "risk_score", "decision", "status", "duplicate_of", "reviewed_by", "created_at"]
+
+
+def invoices_csv() -> str:
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(CSV_COLUMNS)
+    for inv in list_invoices(limit=100_000):
+        w.writerow([_csv_safe(inv.get(c)) for c in CSV_COLUMNS])
+    return buf.getvalue()
+
+
+def public_settings() -> dict:
+    """Read-only view of the rules. A whitelist on purpose: never dump the whole settings object (it holds secrets)."""
+    from app.config import settings as cfg
+    from app.risk.engine import WEIGHTS
+    from app.validation import rules
+    keys = ["auto_approve_max_risk", "auto_reject_min_risk", "auto_approve_max_amount", "new_vendor_review_amount",
+            "classifier_min_confidence"]
+    return {"thresholds": {k: getattr(cfg, k) for k in keys}, "risk_weights": WEIGHTS, "high_risk_at": HIGH_RISK,
+            "validation_rules": {"max_payment_terms_days": rules.MAX_PAYMENT_TERMS_DAYS,
+                                 "max_reasonable_amount": rules.MAX_REASONABLE_AMOUNT,
+                                 "allowed_currencies": ", ".join(sorted(rules.ALLOWED_CURRENCIES))},
+            "savings_assumptions": {"minutes_per_invoice": MANUAL_MINUTES_PER_INVOICE, "hourly_cost": HOURLY_COST},
+            "demo_mode": cfg.demo_mode, "auth_required": bool(cfg.api_key.get_secret_value())}

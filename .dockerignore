@@ -7,3 +7,11 @@ __pycache__/
 *.db
 models/*.joblib
 docs/
+.env
+.env.*
+!.env.example
+inbox/
+opspilot.db
+eval.db
+.idea/
+.vscode/

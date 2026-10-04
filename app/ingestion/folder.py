@@ -3,10 +3,12 @@ but no mail account or password needed. Useful for demos, tests, and for emails 
 mail client (in most clients: open the message, 'Save as' / 'Download message' gives an .eml).
 
     python -m app.ingestion.folder inbox            # process every inbox/*.eml once
+    python -m app.ingestion.folder inbox --watch 10 # keep checking every 10 seconds (used by docker compose)
 Processed files move to inbox/processed/, files the API rejected to inbox/rejected/.
 Files stay where they are if the API is down, so just run it again."""
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from app.config import settings
@@ -43,13 +45,19 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("folder", help="folder containing .eml files")
     ap.add_argument("--api-url", default=settings.api_url)
+    ap.add_argument("--watch", type=int, metavar="SECONDS", help="keep running, checking the folder this often")
     a = ap.parse_args()
     if not Path(a.folder).is_dir():
         print(f"No such folder: {a.folder}")
         return 2
-    stats = ingest_folder(a.folder, http_submit(a.api_url))
-    print(stats.summary())
-    return 1 if stats.stopped_early else 0
+    submit = http_submit(a.api_url, api_key=settings.api_key.get_secret_value() or None)
+    while True:
+        stats = ingest_folder(a.folder, submit)
+        if stats.processed or stats.flagged or stats.stopped_early or not a.watch:
+            print(f"[{time.strftime('%H:%M:%S')}] {stats.summary()}", flush=True)
+        if not a.watch:
+            return 1 if stats.stopped_early else 0
+        time.sleep(a.watch)
 
 
 if __name__ == "__main__":

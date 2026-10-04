@@ -42,7 +42,7 @@ def main() -> int:
     if not (settings.imap_host and settings.imap_user and settings.imap_password.get_secret_value()):
         print("Set OPSPILOT_IMAP_HOST, OPSPILOT_IMAP_USER and OPSPILOT_IMAP_PASSWORD (see .env.example).")
         return 2
-    submit = http_submit(settings.api_url)
+    submit = http_submit(settings.api_url, api_key=settings.api_key.get_secret_value() or None)
     while True:
         ok = cycle(submit)
         if a.once:
